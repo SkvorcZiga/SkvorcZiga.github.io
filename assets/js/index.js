@@ -91,9 +91,61 @@ loader.load(switchModel.href, function (gltf) {
   });
   scene.add(gltf.scene);
   switchObject = gltf.scene;
+  loadButtons(); // Load buttons only after switch is ready
 }, undefined, function (error) {
   console.error('An error happened while loading the Switch model:', error);
 });
+
+// Define the loadButtons function
+function loadButtons() {
+  loader.load(switchButton01.href, function (gltf) {
+    gltf.scene.traverse(function(child) {
+      if (child.isMesh) {
+        child.material = new THREE.MeshStandardMaterial({ color: 0xff0000 });
+      }
+    });
+    gltf.scene.userData.isButton = true;
+    switchObject.add(gltf.scene);
+    gltf.scene.userData.toggled = false;
+    gltf.scene.userData.buttonColor = 0xff0000;
+    clickableButtons.push(gltf.scene);
+  });
+
+  loader.load(switchButton02.href, function (gltf) {
+    gltf.scene.traverse(function(child) {
+      if (child.isMesh) {
+        child.material = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
+      }
+    });
+    gltf.scene.userData.isButton = true;
+    switchObject.add(gltf.scene);
+    gltf.scene.userData.toggled = false;
+    gltf.scene.userData.buttonColor = 0x00ff00;
+    clickableButtons.push(gltf.scene);
+  });
+
+  loader.load(switchButton03.href, function (gltf) {
+    gltf.scene.traverse(function(child) {
+      if (child.isMesh) {
+        child.material = new THREE.MeshStandardMaterial({ color: 0x0000ff });
+      }
+    });
+    gltf.scene.userData.isButton = true;
+    switchObject.add(gltf.scene);
+    gltf.scene.userData.toggled = false;
+    gltf.scene.userData.buttonColor = 0x0000ff;
+    clickableButtons.push(gltf.scene);
+  });
+}
+
+function setSwitchColor(hexColor) {
+  if (!switchObject) return;
+  switchObject.traverse(function(child) {
+    if (child.isMesh && !child.parent.userData.isButton && !child.userData.isButton) {
+      child.material.color.setHex(hexColor);
+    }
+  });
+}
 
 // Set up OrbitControls
 const controls = new OrbitControls(camera, renderer.domElement);
@@ -346,58 +398,3 @@ function updateSwitchColor() {
     setSwitchColor(newColor);
   }
 }
-
-// Function to set the switch model's material color
-function setSwitchColor(hexColor) {
-  if (!switchObject) return;
-  switchObject.traverse(function(child) {
-    if (child.isMesh) {
-      child.material.color.setHex(hexColor);
-    }
-  });
-}
-
-// Load SwitchButton01 with red material
-loader.load(switchButton01.href, function (gltf) {
-  gltf.scene.traverse(function(child) {
-    if (child.isMesh) {
-      child.material = new THREE.MeshStandardMaterial({ color: 0xff0000 });
-    }
-  });
-  scene.add(gltf.scene);
-  gltf.scene.userData.toggled = false;
-  gltf.scene.userData.buttonColor = 0xff0000;
-  clickableButtons.push(gltf.scene);
-}, undefined, function (error) {
-  console.error('An error happened while loading SwitchButton01:', error);
-});
-
-// Load SwitchButton02 with green material
-loader.load(switchButton02.href, function (gltf) {
-  gltf.scene.traverse(function(child) {
-    if (child.isMesh) {
-      child.material = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
-    }
-  });
-  scene.add(gltf.scene);
-  gltf.scene.userData.toggled = false;
-  gltf.scene.userData.buttonColor = 0x00ff00;
-  clickableButtons.push(gltf.scene);
-}, undefined, function (error) {
-  console.error('An error happened while loading SwitchButton02:', error);
-});
-
-// Load SwitchButton03 with blue material
-loader.load(switchButton03.href, function (gltf) {
-  gltf.scene.traverse(function(child) {
-    if (child.isMesh) {
-      child.material = new THREE.MeshStandardMaterial({ color: 0x0000ff });
-    }
-  });
-  scene.add(gltf.scene);
-  gltf.scene.userData.toggled = false;
-  gltf.scene.userData.buttonColor = 0x0000ff;
-  clickableButtons.push(gltf.scene);
-}, undefined, function (error) {
-  console.error('An error happened while loading SwitchButton03:', error);
-});
