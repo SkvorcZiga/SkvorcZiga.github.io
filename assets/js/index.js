@@ -204,6 +204,48 @@ controller1.addEventListener('selectend', onSelectEnd);
 controller2.addEventListener('selectstart', onSelectStart);
 controller2.addEventListener('selectend', onSelectEnd);
 
+// Enable multi-touch manipulation in VR mode (for devices without VR controllers)
+let isTouchGrabbing = false;
+let initialTouchDistance = 0;
+let initialTouchAngle = 0;
+let initialSwitchRotation = 0;
+let initialSwitchScale = new THREE.Vector3();
+
+window.addEventListener('touchstart', (event) => {
+  // If in VR mode and exactly two touches are detected
+  if (renderer.xr.isPresenting && event.touches.length === 2) {
+    event.preventDefault();
+    isTouchGrabbing = true;
+    const touch1 = event.touches[0];
+    const touch2 = event.touches[1];
+    initialTouchDistance = Math.hypot(touch2.clientX - touch1.clientX, touch2.clientY - touch1.clientY);
+    initialTouchAngle = Math.atan2(touch2.clientY - touch1.clientY, touch2.clientX - touch1.clientX);
+    initialSwitchRotation = switchObject.rotation.y;
+    initialSwitchScale.copy(switchObject.scale);
+  }
+});
+
+window.addEventListener('touchmove', (event) => {
+  if (renderer.xr.isPresenting && isTouchGrabbing && event.touches.length === 2) {
+    event.preventDefault();
+    const touch1 = event.touches[0];
+    const touch2 = event.touches[1];
+    const currentDistance = Math.hypot(touch2.clientX - touch1.clientX, touch2.clientY - touch1.clientY);
+    const currentAngle = Math.atan2(touch2.clientY - touch1.clientY, touch2.clientX - touch1.clientX);
+    const scaleRatio = currentDistance / initialTouchDistance;
+    switchObject.scale.set(initialSwitchScale.x * scaleRatio, initialSwitchScale.y * scaleRatio, initialSwitchScale.z * scaleRatio);
+    // Compute rotation delta and update object's y-axis rotation
+    const deltaAngle = currentAngle - initialTouchAngle;
+    switchObject.rotation.y = initialSwitchRotation + deltaAngle;
+  }
+});
+
+window.addEventListener('touchend', (event) => {
+  if (renderer.xr.isPresenting && event.touches.length < 2) {
+    isTouchGrabbing = false;
+  }
+});
+
 // Animation loop
 function animate() {
   // If an object is grabbed via VR controllers, update its transform
