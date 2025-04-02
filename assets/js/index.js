@@ -149,10 +149,26 @@ window.addEventListener('touchstart', (event) => {
 });
 
 // Set up VR controllers for object manipulation and button interaction
+function buildControllerRay(controller) {
+  const geometry = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(0, 0, 0),
+    new THREE.Vector3(0, 0, -1)
+  ]);
+  const material = new THREE.LineBasicMaterial({ color: 0xff0000 });
+  const line = new THREE.Line(geometry, material);
+  line.name = 'ray';
+  line.scale.z = 5; // length of the ray
+  controller.add(line);
+}
+
 const controller1 = renderer.xr.getController(0);
+buildControllerRay(controller1);
 scene.add(controller1);
+
 const controller2 = renderer.xr.getController(1);
+buildControllerRay(controller2);
 scene.add(controller2);
+
 controllers.push(controller1, controller2);
 
 function onSelectStart(event) {
