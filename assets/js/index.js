@@ -60,6 +60,7 @@ const switchButton01 = new URL("../gltf/SwitchButton01.glb", import.meta.url);
 const switchButton02 = new URL("../gltf/SwitchButton02.glb", import.meta.url);
 const switchButton03 = new URL("../gltf/SwitchButton03.glb", import.meta.url);
 let switchObject; // Global variable for the switch model
+let originalSwitchPosition, originalSwitchRotation, originalSwitchScale; // Store original position, rotation, and scale
 
 // Set up scene, camera, and renderer
 const scene = new THREE.Scene();
@@ -91,6 +92,12 @@ loader.load(switchModel.href, function (gltf) {
   });
   scene.add(gltf.scene);
   switchObject = gltf.scene;
+  
+  // Store original position, rotation, and scale
+  originalSwitchPosition = switchObject.position.clone();
+  originalSwitchRotation = switchObject.rotation.clone();
+  originalSwitchScale = switchObject.scale.clone();
+  
   loadButtons(); // Load buttons only after switch is ready
 }, undefined, function (error) {
   console.error('An error happened while loading the Switch model:', error);
@@ -399,31 +406,11 @@ function updateSwitchColor() {
   }
 }
 
-// Add Exit VR button on session start and remove on session end
-renderer.xr.addEventListener('sessionstart', () => {
-  const exitButton = document.createElement('button');
-  exitButton.id = 'exitVrButton';
-  exitButton.textContent = 'Exit VR';
-  exitButton.style.position = 'absolute';
-  exitButton.style.top = '20px';
-  exitButton.style.right = '20px';
-  exitButton.style.padding = '10px 20px';
-  exitButton.style.fontSize = '18px';
-  exitButton.style.cursor = 'pointer';
-  exitButton.style.zIndex = '10000';
-
-  exitButton.addEventListener('click', () => {
-    if (renderer.xr.getSession()) {
-      renderer.xr.getSession().end();
-    }
-  });
-
-  document.body.appendChild(exitButton);
-});
-
+// Reset switch object on VR session end
 renderer.xr.addEventListener('sessionend', () => {
-  const existingExit = document.getElementById('exitVrButton');
-  if (existingExit) {
-    existingExit.remove();
+  if (switchObject && originalSwitchPosition && originalSwitchRotation && originalSwitchScale) {
+    switchObject.position.copy(originalSwitchPosition);
+    switchObject.rotation.copy(originalSwitchRotation);
+    switchObject.scale.copy(originalSwitchScale);
   }
 });
