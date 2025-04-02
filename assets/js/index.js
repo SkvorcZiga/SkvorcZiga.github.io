@@ -234,3 +234,23 @@ window.addEventListener('click', (event) => {
     }
   }
 });
+
+// Add touch event listener for mobile devices
+window.addEventListener('touchstart', (event) => {
+  // Use the first touch point
+  const touch = event.touches[0];
+  mouse.x = (touch.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = - (touch.clientY / window.innerHeight) * 2 + 1;
+  
+  raycaster.setFromCamera(mouse, camera);
+  const intersects = raycaster.intersectObjects(clickableButtons, true);
+  if (intersects.length > 0) {
+    let button = intersects[0].object;
+    while (button && !clickableButtons.includes(button)) {
+      button = button.parent;
+    }
+    if (button) {
+      toggleButtonPosition(button);
+    }
+  }
+});
