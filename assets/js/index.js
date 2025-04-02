@@ -98,12 +98,145 @@ loader.load(switchModel.href, function (gltf) {
 // Set up OrbitControls
 const controls = new OrbitControls(camera, renderer.domElement);
 
+// Make sure to define these near your scene setup
+const clickableButtons = [];
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+
+// Variables for VR object manipulation
+const controllers = [];
+let grabbedObject = null;
+let initialGrabDistance = 0;
+let initialScale = new THREE.Vector3();
+
+// Add click event listener
+window.addEventListener('click', (event) => {
+  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
+  
+  raycaster.setFromCamera(mouse, camera);
+  const intersects = raycaster.intersectObjects(clickableButtons, true);
+  if (intersects.length > 0) {
+    // Assuming the button's root is in clickableButtons
+    let button = intersects[0].object;
+    while (button && !clickableButtons.includes(button)) {
+      button = button.parent;
+    }
+    if (button) {
+      toggleButtonPosition(button);
+    }
+  }
+});
+
+// Add touch event listener for mobile devices
+window.addEventListener('touchstart', (event) => {
+  // Use the first touch point
+  const touch = event.touches[0];
+  mouse.x = (touch.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = - (touch.clientY / window.innerHeight) * 2 + 1;
+  
+  raycaster.setFromCamera(mouse, camera);
+  const intersects = raycaster.intersectObjects(clickableButtons, true);
+  if (intersects.length > 0) {
+    let button = intersects[0].object;
+    while (button && !clickableButtons.includes(button)) {
+      button = button.parent;
+    }
+    if (button) {
+      toggleButtonPosition(button);
+    }
+  }
+});
+
+// Set up VR controllers for object manipulation and button interaction
+const controller1 = renderer.xr.getController(0);
+scene.add(controller1);
+const controller2 = renderer.xr.getController(1);
+scene.add(controller2);
+controllers.push(controller1, controller2);
+
+function onSelectStart(event) {
+  const controller = event.target;
+  // Prepare a raycaster from the controller
+  const tempMatrix = new THREE.Matrix4();
+  tempMatrix.identity().extractRotation(controller.matrixWorld);
+  raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
+  raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
+  
+  // First, check if a clickable button was hit
+  let intersects = raycaster.intersectObjects(clickableButtons, true);
+  if (intersects.length > 0) {
+    let button = intersects[0].object;
+    while (button && !clickableButtons.includes(button)) {
+      button = button.parent;
+    }
+    if (button) {
+      toggleButtonPosition(button);
+      return; // Do not grab the object if a button was pressed
+    }
+  }
+  
+  // Next, check if the main object (switchObject) was hit
+  intersects = raycaster.intersectObject(switchObject, true);
+  if (intersects.length > 0) {
+    grabbedObject = switchObject;
+    controller.userData.isGrabbing = true;
+    // If two controllers are grabbing, compute the initial distance and scale
+    const activeControllers = controllers.filter(c => c.userData.isGrabbing);
+    if (activeControllers.length === 2) {
+      initialGrabDistance = activeControllers[0].position.distanceTo(activeControllers[1].position);
+      initialScale.copy(grabbedObject.scale);
+    }
+  }
+}
+
+function onSelectEnd(event) {
+  const controller = event.target;
+  controller.userData.isGrabbing = false;
+  // If no controllers are grabbing, release the object
+  if (controllers.filter(c => c.userData.isGrabbing).length === 0) {
+    grabbedObject = null;
+  }
+}
+
+controller1.addEventListener('selectstart', onSelectStart);
+controller1.addEventListener('selectend', onSelectEnd);
+controller2.addEventListener('selectstart', onSelectStart);
+controller2.addEventListener('selectend', onSelectEnd);
+
 // Animation loop
 function animate() {
+  // If an object is grabbed via VR controllers, update its transform
+  const activeControllers = controllers.filter(c => c.userData.isGrabbing);
+  if (grabbedObject) {
+    if (activeControllers.length === 1) {
+      // Single controller: move the object to follow the controller
+      const controller = activeControllers[0];
+      const newPos = new THREE.Vector3();
+      controller.getWorldPosition(newPos);
+      grabbedObject.position.copy(newPos);
+    } else if (activeControllers.length === 2) {
+      // Two controllers: update scale, rotation, and position
+      const [c1, c2] = activeControllers;
+      // Scaling
+      const currentDistance = c1.position.distanceTo(c2.position);
+      const scaleRatio = currentDistance / initialGrabDistance;
+      grabbedObject.scale.set(initialScale.x * scaleRatio, initialScale.y * scaleRatio, initialScale.z * scaleRatio);
+      
+      // Position: set object to midpoint between controllers
+      const midpoint = new THREE.Vector3().addVectors(c1.position, c2.position).multiplyScalar(0.5);
+      grabbedObject.position.copy(midpoint);
+      
+      // Rotation: compute horizontal angle between controllers and apply it to the object's y-axis rotation
+      const angle = Math.atan2(c2.position.z - c1.position.z, c2.position.x - c1.position.x);
+      grabbedObject.rotation.y = angle;
+    }
+  }
+  
   controls.update();
   renderer.render(scene, camera);
 }
-renderer.setAnimationLoop(animate); // Update the Animation Loop
+renderer.setAnimationLoop(animate);
 
 // Adjust on window resize
 window.addEventListener('resize', () => {
@@ -209,48 +342,4 @@ loader.load(switchButton03.href, function (gltf) {
   clickableButtons.push(gltf.scene);
 }, undefined, function (error) {
   console.error('An error happened while loading SwitchButton03:', error);
-});
-
-// Make sure to define these near your scene setup
-const clickableButtons = [];
-const raycaster = new THREE.Raycaster();
-const mouse = new THREE.Vector2();
-
-// Add click event listener
-window.addEventListener('click', (event) => {
-  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-  mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
-  
-  raycaster.setFromCamera(mouse, camera);
-  const intersects = raycaster.intersectObjects(clickableButtons, true);
-  if (intersects.length > 0) {
-    // Assuming the button's root is in clickableButtons
-    let button = intersects[0].object;
-    while (button && !clickableButtons.includes(button)) {
-      button = button.parent;
-    }
-    if (button) {
-      toggleButtonPosition(button);
-    }
-  }
-});
-
-// Add touch event listener for mobile devices
-window.addEventListener('touchstart', (event) => {
-  // Use the first touch point
-  const touch = event.touches[0];
-  mouse.x = (touch.clientX / window.innerWidth) * 2 - 1;
-  mouse.y = - (touch.clientY / window.innerHeight) * 2 + 1;
-  
-  raycaster.setFromCamera(mouse, camera);
-  const intersects = raycaster.intersectObjects(clickableButtons, true);
-  if (intersects.length > 0) {
-    let button = intersects[0].object;
-    while (button && !clickableButtons.includes(button)) {
-      button = button.parent;
-    }
-    if (button) {
-      toggleButtonPosition(button);
-    }
-  }
 });
