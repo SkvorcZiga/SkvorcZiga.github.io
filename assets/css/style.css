@@ -1,0 +1,14 @@
+* {
+    margin: 0;
+}
+
+#playButton, #continueButton {
+    border-radius: 5px;
+    border: 1px solid white;
+    color: white;
+    background-color: #248DD8;
+}
+
+#playButton:hover, #continueButton:hover{
+    background-color: #033258;
+}
