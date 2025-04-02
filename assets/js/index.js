@@ -398,3 +398,32 @@ function updateSwitchColor() {
     setSwitchColor(newColor);
   }
 }
+
+// Add Exit VR button on session start and remove on session end
+renderer.xr.addEventListener('sessionstart', () => {
+  const exitButton = document.createElement('button');
+  exitButton.id = 'exitVrButton';
+  exitButton.textContent = 'Exit VR';
+  exitButton.style.position = 'absolute';
+  exitButton.style.top = '20px';
+  exitButton.style.right = '20px';
+  exitButton.style.padding = '10px 20px';
+  exitButton.style.fontSize = '18px';
+  exitButton.style.cursor = 'pointer';
+  exitButton.style.zIndex = '10000';
+
+  exitButton.addEventListener('click', () => {
+    if (renderer.xr.getSession()) {
+      renderer.xr.getSession().end();
+    }
+  });
+
+  document.body.appendChild(exitButton);
+});
+
+renderer.xr.addEventListener('sessionend', () => {
+  const existingExit = document.getElementById('exitVrButton');
+  if (existingExit) {
+    existingExit.remove();
+  }
+});
